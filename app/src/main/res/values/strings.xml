@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Rock\'Em Shock\'Em Robots</string>
+    <string name="forward">You pressed forward</string>
+    <string name="reverse">You pressed reverse</string>
+    <string name="left">You pressed left</string>
+    <string name="right">You pressed right</string>
+</resources>
