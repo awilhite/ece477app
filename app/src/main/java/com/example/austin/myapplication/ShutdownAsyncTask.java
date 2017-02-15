@@ -2,25 +2,20 @@ package com.example.austin.myapplication;
 
 import android.util.Log;
 import android.os.Handler;
-
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
-import java.net.InetAddress;
-import java.net.Socket;
 import android.os.AsyncTask;
 
 /**
  * Created by Mariusz on 15.10.14.
  *
  * AsyncTask class which manages connection with server app and is sending shutdown command.
+ *
+ * AsyncTask<Params, Progress, Result>
+ *
  */
 
 public class ShutdownAsyncTask extends AsyncTask<String, String, TCPClient> {
 
-    private static final String     COMMAND     = "shutdown -s"      ;
+    private static final String     COMMAND     = "forward"      ;
     private              TCPClient  tcpClient                        ;
     private              Handler    mHandler                         ;
     private static final String     TAG         = "ShutdownAsyncTask";
@@ -42,12 +37,12 @@ public class ShutdownAsyncTask extends AsyncTask<String, String, TCPClient> {
      */
     @Override
     protected TCPClient doInBackground(String... params) {
-        Log.d(TAG, "In do in background");
+        Log.d(TAG, "In doInBackground");
 
         try{
             tcpClient = new TCPClient(mHandler,
                     COMMAND,
-                    "192.168.1.1",
+                    "192.168.1.12",
                     new TCPClient.MessageCallback() {
                         @Override
                         public void callbackMessageReceiver(String message) {
@@ -71,13 +66,14 @@ public class ShutdownAsyncTask extends AsyncTask<String, String, TCPClient> {
     @Override
     protected void onProgressUpdate(String... values) {
         super.onProgressUpdate(values);
-        Log.d(TAG, "In progress update, values: " + values.toString());
-        if(values[0].equals("shutdown")){
+        Log.d(TAG, "In onProgressUpdate, values: " + values.toString());
+
+        if (values[0].equals("shutdown")) {
             tcpClient.sendMessage(COMMAND);
             tcpClient.stopClient();
             mHandler.sendEmptyMessageDelayed(MainActivity.SHUTDOWN, 2000);
 
-        }else{
+        } else {
             tcpClient.sendMessage("wrong");
             mHandler.sendEmptyMessageDelayed(MainActivity.ERROR, 2000);
             tcpClient.stopClient();
@@ -85,10 +81,11 @@ public class ShutdownAsyncTask extends AsyncTask<String, String, TCPClient> {
     }
 
     @Override
-    protected void onPostExecute(TCPClient result){
+    protected void onPostExecute(TCPClient result) {
         super.onPostExecute(result);
-        Log.d(TAG, "In on post execute");
-        if(result != null && result.isRunning()){
+
+        Log.d(TAG, "In onPostExecute");
+        if (result != null && result.isRunning()){
             result.stopClient();
         }
         mHandler.sendEmptyMessageDelayed(MainActivity.SENT, 4000);

@@ -13,34 +13,36 @@ import java.net.InetAddress;
 
 public class TCPClient {
 
-    private static final String            TAG             = "TCPClient"     ;
-    private final Handler mHandler                          ;
-    private              String            ipNumber, incomingMessage, command;
-    BufferedReader in                                ;
-    PrintWriter out                               ;
-    private              MessageCallback   listener        = null            ;
-    private              boolean           mRun            = false           ;
+    private static final String TAG = "TCPClient";
+    private final Handler mHandler;
+    private String ipNumber, incomingMessage, command;
+    BufferedReader in;
+    PrintWriter out;
+    private MessageCallback listener = null;
+    private boolean mRun = false;
 
 
     /**
      * TCPClient class constructor, which is created in AsyncTasks after the button click.
+     *
      * @param mHandler Handler passed as an argument for updating the UI with sent messages
      * @param command  Command passed as an argument, e.g. "shutdown -r" for restarting computer
      * @param ipNumber String retrieved from IpGetter class that is looking for ip number.
      * @param listener Callback interface object
      */
     public TCPClient(Handler mHandler, String command, String ipNumber, MessageCallback listener) {
-        this.listener         = listener;
-        this.ipNumber         = ipNumber;
-        this.command          = command ;
-        this.mHandler         = mHandler;
+        this.listener = listener;
+        this.ipNumber = ipNumber;
+        this.command = command;
+        this.mHandler = mHandler;
     }
 
     /**
      * Public method for sending the message via OutputStream object.
+     *
      * @param message Message passed as an argument and sent via OutputStream object.
      */
-    public void sendMessage(String message){
+    public void sendMessage(String message) {
         if (out != null && !out.checkError()) {
             out.println(message);
             out.flush();
@@ -53,7 +55,7 @@ public class TCPClient {
     /**
      * Public method for stopping the TCPClient object ( and finalizing it after that ) from AsyncTask
      */
-    public void stopClient(){
+    public void stopClient() {
         Log.d(TAG, "Client stopped!");
         mRun = false;
     }
@@ -74,7 +76,7 @@ public class TCPClient {
              *
              * @see com.example.turnmeoff.MainActivity.CONNECTING
              */
-            mHandler.sendEmptyMessageDelayed(MainActivity.CONNECTING,1000);
+            mHandler.sendEmptyMessageDelayed(MainActivity.CONNECTING, 1000);
 
             /**
              * Here the socket is created with hardcoded port.
@@ -99,7 +101,7 @@ public class TCPClient {
                 this.sendMessage(command);
 
                 //
-                mHandler.sendEmptyMessageDelayed(MainActivity.SENDING,2000);
+                mHandler.sendEmptyMessageDelayed(MainActivity.SENDING, 2000);
 
                 //Listen for the incoming messages while mRun = true
                 while (mRun) {
@@ -109,7 +111,6 @@ public class TCPClient {
                         /**
                          * Incoming message is passed to MessageCallback object.
                          * Next it is retrieved by AsyncTask and passed to onPublishProgress method.
-                         *
                          */
                         listener.callbackMessageReceiver(incomingMessage);
 
@@ -118,7 +119,7 @@ public class TCPClient {
 
                 }
 
-                Log.d(TAG, "Received Message: " +incomingMessage);
+                Log.d(TAG, "Received Message: " + incomingMessage);
 
             } catch (Exception e) {
 
@@ -145,13 +146,22 @@ public class TCPClient {
     }
 
     /**
+     * Method for checking if TCPClient is running.
+     * @return true if is running, false if is not running
+     */
+    public boolean isRunning() {
+        return mRun;
+    }
+
+    /**
      * Callback Interface for sending received messages to 'onPublishProgress' method in AsyncTask.
-     *
      */
     public interface MessageCallback {
         /**
          * Method overriden in AsyncTask 'doInBackground' method while creating the TCPClient object.
+         *
          * @param message Received message from server app.
          */
         public void callbackMessageReceiver(String message);
     }
+}

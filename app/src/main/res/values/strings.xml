@@ -4,4 +4,9 @@
     <string name="reverse">You pressed reverse</string>
     <string name="left">You pressed left</string>
     <string name="right">You pressed right</string>
+    <string name="shutdown">Shutdown</string>
+    <string name="error">Error</string>
+    <string name="sending">Sending</string>
+    <string name="connecting">Connecting</string>
+    <string name="sent">Sent</string>
 </resources>
