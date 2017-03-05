@@ -1,63 +1,76 @@
 package com.example.austin.myapplication;
 
-import android.os.Handler;
+import java.io.*;
+import java.net.InetAddress;
+import java.net.Socket;
 import android.util.Log;
 
-import java.io.BufferedReader;
-import java.io.PrintWriter;
-import java.io.BufferedWriter;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.net.Socket;
-import java.net.InetAddress;
-
+/**
+ * Description
+ *
+ * @author Catalin Prata
+ *         Date: 2/12/13
+ */
 public class TCPClient {
 
-    private static final String TAG = "TCPClient";
-    private final Handler mHandler;
-    private String ipNumber, incomingMessage, command;
-    BufferedReader in;
-    PrintWriter out;
-    private MessageCallback listener = null;
+    private String mServerIP; //your computer IP address
+    private int mServerPort = 4444;
+    // message to send to the server
+    private String mServerMessage;
+    // sends message received notifications
+    private OnMessageReceived mMessageListener = null;
+    // while this is true, the server will continue running
     private boolean mRun = false;
+    // used to send messages
+    private PrintWriter mBufferOut;
+    // used to read messages from the server
+    private BufferedReader mBufferIn;
 
+    private String mTAG = "TCPClient";
 
     /**
-     * TCPClient class constructor, which is created in AsyncTasks after the button click.
-     *
-     * @param mHandler Handler passed as an argument for updating the UI with sent messages
-     * @param command  Command passed as an argument, e.g. "shutdown -r" for restarting computer
-     * @param ipNumber String retrieved from IpGetter class that is looking for ip number.
-     * @param listener Callback interface object
+     * Constructor of the class. OnMessagedReceived listens for the messages received from server
      */
-    public TCPClient(Handler mHandler, String command, String ipNumber, MessageCallback listener) {
-        this.listener = listener;
-        this.ipNumber = ipNumber;
-        this.command = command;
-        this.mHandler = mHandler;
+    public TCPClient(String ipAddress, int port, OnMessageReceived listener) {
+        mMessageListener = listener;
+        mServerIP = ipAddress;
+        mServerPort = port;
     }
 
     /**
-     * Public method for sending the message via OutputStream object.
+     * Sends the message entered by client to the server
      *
-     * @param message Message passed as an argument and sent via OutputStream object.
+     * @param message text entered by client
      */
     public void sendMessage(String message) {
-        if (out != null && !out.checkError()) {
-            out.println(message);
-            out.flush();
-            mHandler.sendEmptyMessageDelayed(MainActivity.SENDING, 1000);
-            Log.d(TAG, "Sent Message: " + message);
-
+        if (mBufferOut != null && !mBufferOut.checkError()) {
+            mBufferOut.println(message);
+            mBufferOut.flush();
+        }
+        else {
+            Log.d("sendMessage", "mBufferOut null or error");
         }
     }
 
     /**
-     * Public method for stopping the TCPClient object ( and finalizing it after that ) from AsyncTask
+     * Close the connection and release the members
      */
     public void stopClient() {
-        Log.d(TAG, "Client stopped!");
+
+        // send mesage that we are closing the connection
+        sendMessage("stopped");
+
         mRun = false;
+
+        if (mBufferOut != null) {
+            mBufferOut.flush();
+            mBufferOut.close();
+        }
+
+        mMessageListener = null;
+        mBufferIn = null;
+        mBufferOut = null;
+        mServerMessage = null;
     }
 
     public void run() {
@@ -65,103 +78,65 @@ public class TCPClient {
         mRun = true;
 
         try {
-            // Creating InetAddress object from ipNumber passed via constructor from IpGetter class.
-            InetAddress serverAddress = InetAddress.getByName(ipNumber);
+            //here you must put your computer's IP address.
+            InetAddress serverAddr = InetAddress.getByName(mServerIP);
 
-            Log.d(TAG, "Connecting...");
+            Log.e("TCP Client", "C: Connecting...");
 
-            /**
-             * Sending empty message with static int value from MainActivity
-             * to update UI ( 'Connecting...' ).
-             *
-             * @see com.example.turnmeoff.MainActivity.CONNECTING
-             */
-            mHandler.sendEmptyMessageDelayed(MainActivity.CONNECTING, 1000);
-
-            /**
-             * Here the socket is created with hardcoded port.
-             * Also the port is given in IpGetter class.
-             *
-             * @see com.example.turnmeoff.IpGetter
-             */
-            Socket socket = new Socket(serverAddress, 4444);
-
+            //create a socket to make the connection with the server
+            Socket socket = new Socket(serverAddr, mServerPort);
 
             try {
 
-                // Create PrintWriter object for sending messages to server.
-                out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())), true);
+                //sends the message to the server
+                mBufferOut = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())), true);
 
-                //Create BufferedReader object for receiving messages from server.
-                in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                //receives the message which the server sends back
+                mBufferIn = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                // send login name
+                sendMessage("connect");
 
-                Log.d(TAG, "In/Out created");
-
-                //Sending message with command specified by AsyncTask
-                this.sendMessage(command);
-
-                //
-                mHandler.sendEmptyMessageDelayed(MainActivity.SENDING, 2000);
-
-                //Listen for the incoming messages while mRun = true
+                //in this while the client listens for the messages sent by the server
                 while (mRun) {
-                    incomingMessage = in.readLine();
-                    if (incomingMessage != null && listener != null) {
 
-                        /**
-                         * Incoming message is passed to MessageCallback object.
-                         * Next it is retrieved by AsyncTask and passed to onPublishProgress method.
-                         */
-                        listener.callbackMessageReceiver(incomingMessage);
+                    mServerMessage = mBufferIn.readLine();
 
+                    Log.d("TCPClient", mServerMessage);
+
+                    if (mServerMessage != null && mMessageListener != null) {
+                        //call the method messageReceived from MyActivity class
+                        mMessageListener.messageReceived(mServerMessage);
                     }
-                    incomingMessage = null;
+                    else
+                    {
+                        Log.d("TCPClient", "Server Message Null");
+                    }
 
                 }
 
-                Log.d(TAG, "Received Message: " + incomingMessage);
+                Log.e("RESPONSE FROM SERVER", "S: Received Message: '" + mServerMessage + "'");
 
             } catch (Exception e) {
 
-                Log.d(TAG, "Error", e);
-                mHandler.sendEmptyMessageDelayed(MainActivity.ERROR, 2000);
+                Log.e("TCP", "S: Error", e);
 
             } finally {
-
-                out.flush();
-                out.close();
-                in.close();
+                //the socket must be closed. It is not possible to reconnect to this socket
+                // after it is closed, which means a new socket instance has to be created.
                 socket.close();
-                mHandler.sendEmptyMessageDelayed(MainActivity.SENT, 3000);
-                Log.d(TAG, "Socket Closed");
             }
 
         } catch (Exception e) {
 
-            Log.d(TAG, "Error", e);
-            mHandler.sendEmptyMessageDelayed(MainActivity.ERROR, 2000);
+            Log.e("TCP", "C: Error", e);
 
         }
 
     }
 
-    /**
-     * Method for checking if TCPClient is running.
-     * @return true if is running, false if is not running
-     */
-    public boolean isRunning() {
-        return mRun;
-    }
-
-    /**
-     * Callback Interface for sending received messages to 'onPublishProgress' method in AsyncTask.
-     */
-    public interface MessageCallback {
-        /**
-         * Method overriden in AsyncTask 'doInBackground' method while creating the TCPClient object.
-         *
-         * @param message Received message from server app.
-         */
-        public void callbackMessageReceiver(String message);
+    //Declare the interface. The method messageReceived(String message) will must be implemented in the MyActivity
+    //class at on asynckTask doInBackground
+    public interface OnMessageReceived {
+        public void messageReceived(String message);
     }
 }
