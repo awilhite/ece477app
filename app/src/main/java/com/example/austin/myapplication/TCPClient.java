@@ -15,6 +15,7 @@ public class TCPClient {
 
     private String mServerIP; //your computer IP address
     private int mServerPort = 4444;
+    private int mVehicleNum;
     // message to send to the server
     private String mServerMessage;
     // sends message received notifications
@@ -94,7 +95,7 @@ public class TCPClient {
                 //receives the message which the server sends back
                 mBufferIn = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 // send login name
-                sendMessage("connect");
+                sendMessage("c");
 
                 //in this while the client listens for the messages sent by the server
                 while (mRun) {
